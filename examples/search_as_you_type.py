@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  Licensed to Elasticsearch B.V. under one or more contributor
 #  license agreements. See the NOTICE file distributed with
 #  this work for additional information regarding copyright
@@ -24,6 +25,7 @@ within the input.
 
 To custom analyzer with ascii folding allow search to work in different languages.
 """
+from __future__ import print_function, unicode_literals
 
 from elasticsearch_dsl import (
     Document,

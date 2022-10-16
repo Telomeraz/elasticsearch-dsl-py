@@ -15,6 +15,7 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
+from __future__ import print_function
 
 from elasticsearch_dsl import A, Search, connections
 
@@ -35,7 +36,8 @@ def scan_aggs(search, source_aggs, inner_aggs={}, size=10):
 
     response = run_search()
     while response.aggregations.comp.buckets:
-        yield from response.aggregations.comp.buckets
+        for b in response.aggregations.comp.buckets:
+            yield b
         if "after_key" in response.aggregations.comp:
             after = response.aggregations.comp.after_key
         else:

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  Licensed to Elasticsearch B.V. under one or more contributor
 #  license agreements. See the NOTICE file distributed with
 #  this work for additional information regarding copyright
@@ -61,8 +62,8 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "Elasticsearch DSL"
-copyright = "%d, Elasticsearch B.V" % datetime.datetime.now().year
+project = u"Elasticsearch DSL"
+copyright = u"%d, Elasticsearch B.V" % datetime.datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -215,8 +216,8 @@ latex_documents = [
     (
         "index",
         "Elasticsearch-dsl.tex",
-        "Elasticsearch DSL Documentation",
-        "Elasticsearch B.V",
+        u"Elasticsearch DSL Documentation",
+        u"Elasticsearch B.V",
         "manual",
     ),
 ]
@@ -250,8 +251,8 @@ man_pages = [
     (
         "index",
         "elasticsearch-dsl",
-        "Elasticsearch DSL Documentation",
-        ["Elasticsearch B.V"],
+        u"Elasticsearch DSL Documentation",
+        [u"Elasticsearch B.V"],
         1,
     )
 ]
@@ -269,8 +270,8 @@ texinfo_documents = [
     (
         "index",
         "Elasticsearch",
-        "Elasticsearch Documentation",
-        "Elasticsearch B.V",
+        u"Elasticsearch Documentation",
+        u"Elasticsearch B.V",
         "Elasticsearch",
         "One line description of project.",
         "Miscellaneous",

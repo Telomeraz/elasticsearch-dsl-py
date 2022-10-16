@@ -15,10 +15,15 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-import collections.abc
+try:
+    import collections.abc as collections_abc  # only works on python 3.3+
+except ImportError:
+    import collections as collections_abc
+
 from fnmatch import fnmatch
 
 from elasticsearch.exceptions import NotFoundError, RequestError
+from six import add_metaclass, iteritems
 
 from .connections import get_connection
 from .exceptions import IllegalOperation, ValidationException
@@ -29,7 +34,7 @@ from .search import Search
 from .utils import DOC_META_FIELDS, META_FIELDS, ObjectBase, merge
 
 
-class MetaField:
+class MetaField(object):
     def __init__(self, *args, **kwargs):
         self.args, self.kwargs = args, kwargs
 
@@ -38,7 +43,7 @@ class DocumentMeta(type):
     def __new__(cls, name, bases, attrs):
         # DocumentMeta filters attrs in place
         attrs["_doc_type"] = DocumentOptions(name, bases, attrs)
-        return super().__new__(cls, name, bases, attrs)
+        return super(DocumentMeta, cls).__new__(cls, name, bases, attrs)
 
 
 class IndexMeta(DocumentMeta):
@@ -47,7 +52,7 @@ class IndexMeta(DocumentMeta):
     _document_initialized = False
 
     def __new__(cls, name, bases, attrs):
-        new_cls = super().__new__(cls, name, bases, attrs)
+        new_cls = super(IndexMeta, cls).__new__(cls, name, bases, attrs)
         if cls._document_initialized:
             index_opts = attrs.pop("Index", None)
             index = cls.construct_index(index_opts, bases)
@@ -74,7 +79,7 @@ class IndexMeta(DocumentMeta):
         return i
 
 
-class DocumentOptions:
+class DocumentOptions(object):
     def __init__(self, name, bases, attrs):
         meta = attrs.pop("Meta", None)
 
@@ -82,7 +87,7 @@ class DocumentOptions:
         self.mapping = getattr(meta, "mapping", Mapping())
 
         # register all declared fields into the mapping
-        for name, value in list(attrs.items()):
+        for name, value in list(iteritems(attrs)):
             if isinstance(value, Field):
                 self.mapping.field(name, value)
                 del attrs[name]
@@ -103,7 +108,8 @@ class DocumentOptions:
         return self.mapping.properties.name
 
 
-class InnerDoc(ObjectBase, metaclass=DocumentMeta):
+@add_metaclass(DocumentMeta)
+class InnerDoc(ObjectBase):
     """
     Common class for inner documents like Object or Nested
     """
@@ -112,10 +118,11 @@ class InnerDoc(ObjectBase, metaclass=DocumentMeta):
     def from_es(cls, data, data_only=False):
         if data_only:
             data = {"_source": data}
-        return super().from_es(data)
+        return super(InnerDoc, cls).from_es(data)
 
 
-class Document(ObjectBase, metaclass=IndexMeta):
+@add_metaclass(IndexMeta)
+class Document(ObjectBase):
     """
     Model-like class for persisting documents in elasticsearch.
     """
@@ -163,7 +170,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
         return "{}({})".format(
             self.__class__.__name__,
             ", ".join(
-                f"{key}={getattr(self.meta, key)!r}"
+                "{}={!r}".format(key, getattr(self.meta, key))
                 for key in ("index", "id")
                 if key in self.meta
             ),
@@ -240,7 +247,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
         es = cls._get_connection(using)
         body = {
             "docs": [
-                doc if isinstance(doc, collections.abc.Mapping) else {"_id": doc}
+                doc if isinstance(doc, collections_abc.Mapping) else {"_id": doc}
                 for doc in docs
             ]
         }
@@ -275,7 +282,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
             raise RequestError(400, message, error_docs)
         if missing_docs:
             missing_ids = [doc["_id"] for doc in missing_docs]
-            message = f"Documents {', '.join(missing_ids)} not found."
+            message = "Documents %s not found." % ", ".join(missing_ids)
             raise NotFoundError(404, message, {"docs": missing_docs})
         return objs
 
@@ -314,7 +321,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
             ``[]``, ``{}``) to be left on the document. Those values will be
             stripped out otherwise as they make no difference in elasticsearch.
         """
-        d = super().to_dict(skip_empty=skip_empty)
+        d = super(Document, self).to_dict(skip_empty=skip_empty)
         if not include_meta:
             return d
 
@@ -341,7 +348,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
         scripted_upsert=False,
         upsert=None,
         return_doc_meta=False,
-        **fields,
+        **fields
     ):
         """
         Partial update of the document, specify fields you wish to update and
@@ -440,7 +447,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
         validate=True,
         skip_empty=True,
         return_doc_meta=False,
-        **kwargs,
+        **kwargs
     ):
         """
         Save the document into elasticsearch. If the document doesn't exist it
@@ -478,7 +485,7 @@ class Document(ObjectBase, metaclass=IndexMeta):
         meta = es.index(
             index=self._get_index(index),
             body=self.to_dict(skip_empty=skip_empty),
-            **doc_meta,
+            **doc_meta
         )
         # update meta information from ES
         for k in META_FIELDS:

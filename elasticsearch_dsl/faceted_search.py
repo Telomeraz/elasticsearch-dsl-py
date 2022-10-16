@@ -17,6 +17,8 @@
 
 from datetime import datetime, timedelta
 
+from six import iteritems, itervalues
+
 from .aggs import A
 from .query import MatchAll, Nested, Range, Terms
 from .response import Response
@@ -33,7 +35,7 @@ __all__ = [
 ]
 
 
-class Facet:
+class Facet(object):
     """
     A facet on faceted search. Wraps and aggregation and provides functionality
     to create a filter for selected values and return a list of facet values
@@ -135,7 +137,7 @@ class RangeFacet(Facet):
         return out
 
     def __init__(self, ranges, **kwargs):
-        super().__init__(**kwargs)
+        super(RangeFacet, self).__init__(**kwargs)
         self._params["ranges"] = list(map(self._range_to_dict, ranges))
         self._params["keyed"] = False
         self._ranges = dict(ranges)
@@ -162,7 +164,7 @@ class HistogramFacet(Facet):
                     "gte": filter_value,
                     "lt": filter_value + self._params["interval"],
                 }
-            },
+            }
         )
 
 
@@ -206,7 +208,7 @@ class DateHistogramFacet(Facet):
 
     def __init__(self, **kwargs):
         kwargs.setdefault("min_doc_count", 0)
-        super().__init__(**kwargs)
+        super(DateHistogramFacet, self).__init__(**kwargs)
 
     def get_value(self, bucket):
         if not isinstance(bucket["key"], datetime):
@@ -235,7 +237,7 @@ class DateHistogramFacet(Facet):
                         filter_value
                     ),
                 }
-            },
+            }
         )
 
 
@@ -245,7 +247,9 @@ class NestedFacet(Facet):
     def __init__(self, path, nested_facet):
         self._path = path
         self._inner = nested_facet
-        super().__init__(path=path, aggs={"inner": nested_facet.get_aggregation()})
+        super(NestedFacet, self).__init__(
+            path=path, aggs={"inner": nested_facet.get_aggregation()}
+        )
 
     def get_values(self, data, filter_values):
         return self._inner.get_values(data.inner, filter_values)
@@ -265,7 +269,7 @@ class FacetedResponse(Response):
     def facets(self):
         if not hasattr(self, "_facets"):
             super(AttrDict, self).__setattr__("_facets", AttrDict({}))
-            for name, facet in self._faceted_search.facets.items():
+            for name, facet in iteritems(self._faceted_search.facets):
                 self._facets[name] = facet.get_values(
                     getattr(getattr(self.aggregations, "_filter_" + name), name),
                     self._faceted_search.filter_values.get(name, ()),
@@ -273,7 +277,7 @@ class FacetedResponse(Response):
         return self._facets
 
 
-class FacetedSearch:
+class FacetedSearch(object):
     """
     Abstraction for creating faceted navigation searches that takes care of
     composing the queries, aggregations and filters as needed as well as
@@ -331,7 +335,7 @@ class FacetedSearch:
         self._filters = {}
         self._sort = sort
         self.filter_values = {}
-        for name, value in filters.items():
+        for name, value in iteritems(filters):
             self.add_filter(name, value)
 
         self._s = self.build_search()
@@ -396,10 +400,10 @@ class FacetedSearch:
         Add aggregations representing the facets selected, including potential
         filters.
         """
-        for f, facet in self.facets.items():
+        for f, facet in iteritems(self.facets):
             agg = facet.get_aggregation()
             agg_filter = MatchAll()
-            for field, filter in self._filters.items():
+            for field, filter in iteritems(self._filters):
                 if f == field:
                     continue
                 agg_filter &= filter
@@ -416,7 +420,7 @@ class FacetedSearch:
             return search
 
         post_filter = MatchAll()
-        for f in self._filters.values():
+        for f in itervalues(self._filters):
             post_filter &= f
         return search.post_filter(post_filter)
 

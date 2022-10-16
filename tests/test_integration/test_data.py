@@ -15,6 +15,8 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
+from __future__ import unicode_literals
+
 
 def create_flat_git_index(client, index):
     # we will use user on several places
